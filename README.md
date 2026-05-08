@@ -96,9 +96,3 @@ chat-socketio/
 * Interface plus moderne (React)
 * Messages persistants
 * Notifications push
-
----
-
-## Auteur
-
-Projet réalisé dans le cadre d’un apprentissage full-stack avec Node.js et Socket.IO.
