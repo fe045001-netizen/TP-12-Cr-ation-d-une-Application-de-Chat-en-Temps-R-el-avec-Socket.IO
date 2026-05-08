@@ -196,4 +196,6 @@ a {
   .chat-sidebar {
     display: none;
   }
+}.chat-container {
+  display: none;
 }

@@ -1,26 +1,19 @@
-const roomMessages = {};
+const messages = {};
 
-// Ajouter message
 function addRoomMessage(room, message) {
-
-  if (!roomMessages[room]) {
-    roomMessages[room] = [];
+  if (!messages[room]) {
+    messages[room] = [];
   }
 
-  roomMessages[room].push(message);
-
-  // Limite à 100 messages
-  if (roomMessages[room].length > 100) {
-    roomMessages[room].shift();
+  if (messages[room].length >= 50) {
+    messages[room].shift();
   }
 
+  messages[room].push(message);
 }
 
-// Récupérer historique
 function getRoomMessages(room) {
-
-  return roomMessages[room] || [];
-
+  return messages[room] || [];
 }
 
 module.exports = {

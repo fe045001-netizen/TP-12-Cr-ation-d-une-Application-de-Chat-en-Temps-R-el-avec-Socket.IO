@@ -1,4 +1,3 @@
-const socket = io();
 
 // Éléments du DOM
 const chatForm = document.getElementById('chat-form');
@@ -9,7 +8,7 @@ const joinForm = document.getElementById('join-form');
 const joinContainer = document.getElementById('join-container');
 const chatContainer = document.querySelector('.chat-container');
 const leaveBtn = document.getElementById('leave-btn');
-
+const socket = io("http://localhost:3000");
 const roomSelect = document.getElementById('room');
 const customRoomContainer = document.getElementById('custom-room-container');
 const customRoomInput = document.getElementById('customRoom');

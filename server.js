@@ -17,31 +17,23 @@ const {
   getRoomMessages
 } = require('./utils/roomMessages');
 
-// ======================
-// Configuration Express
-// ======================
-
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server);
+// ✅ CORRECTION IMPORTANTE SOCKET.IO
+const io = new Server(server, {
+  cors: {
+    origin: "*"
+  }
+});
 
-// Fichiers statiques
 app.use(express.static(path.join(__dirname, 'public')));
 
 const botName = 'Système';
 
-// ======================
-// Socket.IO
-// ======================
-
 io.on('connection', (socket) => {
 
-  console.log(`Client connecté : ${socket.id}`);
-
-  // ======================
-  // Rejoindre un salon
-  // ======================
+  console.log('Client connecté:', socket.id);
 
   socket.on('joinRoom', ({ username, room }) => {
 
@@ -49,234 +41,54 @@ io.on('connection', (socket) => {
 
     socket.join(user.room);
 
-    // Message bienvenue
+    // bienvenue
     socket.emit(
       'message',
-      formatMessage(
-        botName,
-        `Bienvenue dans le salon ${user.room} !`
-      )
+      formatMessage(botName, `Bienvenue dans ${user.room}`)
     );
 
-    // Historique des messages
-    const roomMessages = getRoomMessages(user.room);
+    // historique
+    socket.emit('messageHistory', getRoomMessages(user.room));
 
-    if (roomMessages.length > 0) {
-      socket.emit('messageHistory', roomMessages);
-    }
+    // notification
+    socket.broadcast.to(user.room).emit(
+      'message',
+      formatMessage(botName, `${user.username} a rejoint`)
+    );
 
-    // Informer les autres
-    socket.broadcast
-      .to(user.room)
-      .emit(
-        'message',
-        formatMessage(
-          botName,
-          `${user.username} a rejoint le salon`
-        )
-      );
-
-    // Liste utilisateurs
     io.to(user.room).emit('roomUsers', {
       room: user.room,
       users: getRoomUsers(user.room)
     });
-
   });
-
-  // ======================
-  // Messages
-  // ======================
 
   socket.on('chatMessage', (msg) => {
 
     const user = getCurrentUser(socket.id);
-
     if (!user) return;
 
-    // ======================
-    // Message privé
-    // ======================
+    const message = formatMessage(user.username, msg);
 
-    if (msg.startsWith('@')) {
+    addRoomMessage(user.room, message);
 
-      const parts = msg.substring(1).split(' ');
-
-      const targetUsername = parts[0];
-
-      const privateMessage =
-        parts.slice(1).join(' ');
-
-      const targetUser =
-        getRoomUsers(user.room).find(
-          u =>
-            u.username.toLowerCase() ===
-            targetUsername.toLowerCase()
-        );
-
-      if (targetUser) {
-
-        io.to(targetUser.id).emit(
-          'message',
-          formatMessage(
-            user.username,
-            `[Privé] ${privateMessage}`,
-            true
-          )
-        );
-
-        socket.emit(
-          'message',
-          formatMessage(
-            user.username,
-            `[Privé à ${targetUser.username}] ${privateMessage}`,
-            true
-          )
-        );
-
-      } else {
-
-        socket.emit(
-          'message',
-          formatMessage(
-            botName,
-            `Utilisateur ${targetUsername} introuvable`
-          )
-        );
-
-      }
-
-    } else {
-
-      // Message normal
-      const message =
-        formatMessage(user.username, msg);
-
-      // Sauvegarder historique
-      addRoomMessage(user.room, message);
-
-      // Envoyer au salon
-      io.to(user.room).emit(
-        'message',
-        message
-      );
-
-    }
-
+    io.to(user.room).emit('message', message);
   });
-
-  // ======================
-  // Typing
-  // ======================
-
-  socket.on('typing', () => {
-
-    const user =
-      getCurrentUser(socket.id);
-
-    if (user) {
-
-      socket.broadcast
-        .to(user.room)
-        .emit(
-          'userTyping',
-          user.username
-        );
-
-    }
-
-  });
-
-  socket.on('stopTyping', () => {
-
-    const user =
-      getCurrentUser(socket.id);
-
-    if (user) {
-
-      socket.broadcast
-        .to(user.room)
-        .emit('userStopTyping');
-
-    }
-
-  });
-
-  // ======================
-  // Quitter salon
-  // ======================
-
-  socket.on('leaveRoom', () => {
-
-    const user =
-      userLeave(socket.id);
-
-    if (user) {
-
-      io.to(user.room).emit(
-        'message',
-        formatMessage(
-          botName,
-          `${user.username} a quitté le salon`
-        )
-      );
-
-      io.to(user.room).emit(
-        'roomUsers',
-        {
-          room: user.room,
-          users: getRoomUsers(user.room)
-        }
-      );
-
-    }
-
-  });
-
-  // ======================
-  // Déconnexion
-  // ======================
 
   socket.on('disconnect', () => {
 
-    const user =
-      userLeave(socket.id);
+    const user = userLeave(socket.id);
 
     if (user) {
-
       io.to(user.room).emit(
         'message',
-        formatMessage(
-          botName,
-          `${user.username} a quitté le salon`
-        )
+        formatMessage(botName, `${user.username} a quitté`)
       );
-
-      io.to(user.room).emit(
-        'roomUsers',
-        {
-          room: user.room,
-          users: getRoomUsers(user.room)
-        }
-      );
-
     }
-
   });
-
 });
 
-// ======================
-// Lancer serveur
-// ======================
-
-const PORT =
-  process.env.PORT || 3000;
+const PORT = 3000;
 
 server.listen(PORT, () => {
-
-  console.log(
-    `Serveur en écoute sur le port ${PORT}`
-  );
-
+  console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
